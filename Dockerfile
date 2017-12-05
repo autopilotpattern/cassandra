@@ -1,9 +1,15 @@
 FROM cassandra:3.11.0
 
-# install wget unzip and dig
+# install wget unzip and dig plus python modules
 RUN set -ex \
     && apt-get update \
-    && apt-get install -y wget unzip dnsutils \
+    && apt-get install -y wget unzip dnsutils python-dev gcc \
+    && wget --quiet -O /tmp/get-pip.py https://bootstrap.pypa.io/get-pip.py \
+    && python /tmp/get-pip.py \
+    && pip install \
+       python-Consul==0.7.2 \
+       manta==2.6.0 \
+    && rm /tmp/get-pip.py \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Consul
@@ -43,8 +49,8 @@ RUN export CONTAINERPILOT_CHECKSUM=8d680939a8a5c8b27e764d55a78f5e3ae7b42ef4 \
 
 COPY etc/containerpilot.json5 /etc/containerpilot.json5
 
-COPY etc/preStart.sh /etc/preStart.sh
-COPY etc/onChange.sh /etc/onChange.sh
+COPY etc/preStart.py /etc/preStart.py
+COPY etc/onChange.py /etc/onChange.py
 COPY etc/cassandra.yaml.ctmpl /etc/cassandra/cassandra.yaml.ctmpl
 
 ### Cassandra-specific setup follows
@@ -63,7 +69,7 @@ COPY etc/jmxremote.access /etc/cassandra/jmxremote.access
 
 RUN chown cassandra:cassandra /etc/cassandra/jmxremote.password /etc/cassandra/jmxremote.access \
     && chmod 400 /etc/cassandra/jmxremote.access /etc/cassandra/jmxremote.password \
-    && chmod +x /etc/preStart.sh /etc/onChange.sh
+    && chmod +x /etc/preStart.py /etc/onChange.py
 
 EXPOSE 7000 7001 7199 9042 9160
 

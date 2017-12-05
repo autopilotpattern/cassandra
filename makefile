@@ -1,24 +1,30 @@
+DC := docker-compose -p autopilotpattern -f examples/compose/local-compose.yml
+
+.PHONY: *
+
 build:
-	docker-compose \
-		-p autopilotpattern \
-		-f examples/compose/docker-compose.yml \
-		build cassandra
+	$(DC) build cassandra
 
 up:
-	docker-compose \
-		-p autopilotpattern \
-		-f examples/compose/docker-compose.yml \
-		up
+	$(DC) up
+
+restart-cassandra:
+	$(DC) stop cassandra && $(DC) rm -vf cassandra && $(DC) build cassandra && $(DC) up cassandra
+
+consul:
+	$(DC) up -d consul
 
 down:
-	docker-compose \
-		-p autopilotpattern \
-		-f examples/compose/docker-compose.yml \
-		down --remove-orphans -v
+	$(DC) down --remove-orphans -v
 
 ps:
-	docker-compose \
-		-p autopilotpattern \
-		-f examples/compose/docker-compose.yml \
-		ps
+	$(DC) ps
 
+cqlsh:
+	$(DC) exec cassandra cqlsh
+
+pyrepl:
+	$(DC) exec cassandra env PYTHONSTARTUP=/.pythonrc python
+
+bash:
+	$(DC) exec cassandra bash

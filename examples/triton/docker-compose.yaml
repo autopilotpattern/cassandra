@@ -3,15 +3,19 @@ version: '2.1'
 
 services:
   cassandra:
-    build: ../../
     image: autopilotpattern/cassandra:latest
-    mem_limit: 1g
     restart: always
-    dns:
-      - 127.0.0.1
+    mem_limit: 4g
+    network_mode: bridge
+    labels:
+      - triton.cns.services=cassandra
     environment:
-      - CONSUL=consul
-      - CONSUL_AGENT=1
+      - CONSUL=cassandra-consul.svc.${TRITON_CNS_SEARCH_DOMAIN_PRIVATE}
+      - CASSANDRA_USER=cassandra
+      - CASSANDRA_PASSWORD=cassandra
+      - CASSANDRA_CLUSTER_NAME=Test Cluster
+      - CASSANDRA_KEYSPACES=demo
+      - CASSANDRA_TOPOLOGY={"demo":{"datacenter1":1}}
     links:
       - consul:consul
 
@@ -21,10 +25,11 @@ services:
     image: autopilotpattern/consul:0.7.2-r0.8
     restart: always
     mem_limit: 128m
+    network_mode: bridge
     ports:
       - 8500:8500
-    dns:
-      - 127.0.0.1
+    labels:
+      - triton.cns.services=cassandra-consul
     command: >
       /usr/local/bin/containerpilot
       /bin/consul agent -server

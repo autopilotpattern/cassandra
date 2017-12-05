@@ -27,7 +27,7 @@
     {
       // without a "when" field this will start first
       name: "preStart",
-      exec: "sh /etc/preStart.sh"
+      exec: "python /etc/preStart.py"
     },
     {
       name: "cassandra",
@@ -35,7 +35,7 @@
       restarts: "unlimited",
       port: 9042,
       health: {
-        exec: "nodetool -u cassandra -pw cassandra status",
+        exec: "nodetool -u {{ .CASSANDRA_USER }} -pw {{ .CASSANDRA_PASSWORD }} status",
         interval: 5,
         ttl: 15,
         timeout: "10s"
@@ -47,7 +47,7 @@
     },
     {
       name: 'onChange-cassandra',
-      exec: 'sh /etc/onChange.sh',
+      exec: 'python /etc/onChange.py',
       when: {
         source: 'watch.cassandra',
         each: 'changed'

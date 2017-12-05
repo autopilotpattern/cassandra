@@ -1,1 +1,0 @@
-echo preStart-cassandra fired
