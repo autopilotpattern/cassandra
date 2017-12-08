@@ -421,7 +421,9 @@ seed_provider:
       parameters:
           # seeds is actually a comma-delimited list of addresses.
           # Ex: "<ip1>,<ip2>,<ip3>"
-          - seeds: {{ range service "cassandra" }}{{ .Address }},{{ end }}
+          - seeds: {{ range datacenters }}{{ $seedKey := printf "cassandra-seeds@%s" . }}{{ if keyExists $seedKey }}{{ key $seedKey }},{{ end }}{{ end }}
+
+# {{ range datacenters }}{{ $seedKey := printf "cassandra-seeds-%s" . }}{{ $seedKey }}:{{ if keyExists $seedKey }}{{ key $seedKey }},{{ end }}{{ end }}
 
 # For workloads with more data than can fit in memory, Cassandra's
 # bottleneck will be reads that need to fetch data from

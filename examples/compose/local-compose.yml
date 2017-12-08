@@ -3,33 +3,57 @@ version: '2.1'
 
 services:
   cassandra:
+    build: ../../
     image: autopilotpattern/cassandra:latest
     restart: always
     mem_limit: 2g
     dns: 127.0.0.1
+    # uncomment the following lines for more rapid development
+    volumes:
+      - ../../etc/containerpilot_handler:/usr/local/bin/containerpilot_handler
+      - ../../etc/containerpilot_handler.py:/usr/local/bin/containerpilot_handler.py
+      - ../../etc/cassandra.yaml.ctmpl:/etc/cassandra/cassandra.yaml.ctmpl
+      - ../../tmp:/tmp/snapshots
     environment:
-      - CONSUL=consul
+      - CONSUL=consuldc1
       - CASSANDRA_USER=cassandra
       - CASSANDRA_PASSWORD=cassandra
-      - CASSANDRA_CLUSTER_NAME=Test Cluster
+      - CASSANDRA_CLUSTER_NAME=demo
       - CASSANDRA_KEYSPACES=demo
       - CASSANDRA_TOPOLOGY={"demo":{"datacenter1":1}}
+      - CASSANDRA_ENDPOINT_SNITCH=SimpleSnitch
+      - SNAPSHOT_TARGET=file:///tmp/snapshots
+      # the following options pertain to multi-datacenter deployments
+      # - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
+      # - CASSANDRA_DC=
+      # - CASSANDRA_RACK=
     links:
-      - consul:consul
+      - consuldc1:consul
 
-  # Start with a single host which will bootstrap the cluster.
-  # In production we'll want to use an HA cluster.
-  consul:
-    image: autopilotpattern/consul:0.7.2-r0.8
+  consuldc1:
+    build: .
+    image: autopilotpattern/consul:${TAG:-latest}
     restart: always
     mem_limit: 128m
     ports:
-      - 8500:8500
-    dns: 127.0.0.1
+        - 8500
+    environment:
+      - CONSUL=consuldc1
+      - CONSUL_DATACENTER_NAME=dc1
     command: >
       /usr/local/bin/containerpilot
-      /bin/consul agent -server
-        -config-dir=/etc/consul
-        -log-level=err
-        -bootstrap-expect 1
-        -ui-dir /ui
+
+  consuldc2:
+    image: autopilotpattern/consul:${TAG:-latest}
+    restart: always
+    mem_limit: 128m
+    ports:
+        - 8500
+    environment:
+      - CONSUL=consuldc2
+      - CONSUL_DATACENTER_NAME=dc2
+      - CONSUL_RETRY_JOIN_WAN="consuldc1"
+    command: >
+      /usr/local/bin/containerpilot
+    links:
+      - consuldc1

@@ -3,12 +3,16 @@ FROM cassandra:3.11.0
 # install wget unzip and dig plus python modules
 RUN set -ex \
     && apt-get update \
-    && apt-get install -y wget unzip dnsutils python-dev gcc \
+    && apt-get install --no-install-recommends -y wget unzip dnsutils python-dev gcc \
     && wget --quiet -O /tmp/get-pip.py https://bootstrap.pypa.io/get-pip.py \
     && python /tmp/get-pip.py \
     && pip install \
-       python-Consul==0.7.2 \
-       manta==2.6.0 \
+        # trying to use cqlsh to do this stuff, installing cassandra-driver takes _forever_
+        # cassandra-driver==3.12.0 \
+        python-Consul==0.7.2 \
+        manta==2.6.0 \
+        pyyaml==3.12 \
+    && apt-get purge -y python-dev gcc \
     && rm /tmp/get-pip.py \
     && rm -rf /var/lib/apt/lists/*
 
@@ -49,27 +53,18 @@ RUN export CONTAINERPILOT_CHECKSUM=8d680939a8a5c8b27e764d55a78f5e3ae7b42ef4 \
 
 COPY etc/containerpilot.json5 /etc/containerpilot.json5
 
-COPY etc/preStart.py /etc/preStart.py
-COPY etc/onChange.py /etc/onChange.py
-COPY etc/cassandra.yaml.ctmpl /etc/cassandra/cassandra.yaml.ctmpl
-
 ### Cassandra-specific setup follows
 
-ENV LOCAL_JMX=no
+COPY etc/containerpilot_handler /usr/local/bin/containerpilot_handler
+COPY etc/containerpilot_handler.py /usr/local/bin/containerpilot_handler.py
+COPY etc/cassandra.yaml.ctmpl /etc/cassandra/cassandra.yaml.ctmpl
 
-# only the access line actually seems to do anything
-RUN echo 'if [ "$LOCAL_JMX" = "no" ]; then' "\n" \
-           'JVM_OPTS="$JVM_OPTS -Dcom.sun.management.jmxremote.authenticate=true"' "\n" \
-           'JVM_OPTS="$JVM_OPTS -Dcom.sun.management.jmxremote.password.file=/etc/cassandra/jmxremote.password"' "\n" \
-           'JVM_OPTS="$JVM_OPTS -Dcom.sun.management.jmxremote.access.file=/etc/cassandra/jmxremote.access"' "\n" \
-         'fi' "\n" >> /etc/cassandra/cassandra-env.sh
+# disable the automatic seed configuration that enables single-node bootstrapping
+# the first line corresponds to "always set self as seed"
+# the second line actually inserts CASSANDRA_SEEDS into the cassandra.yaml
+RUN sed -ri '/CASSANDRA_SEEDS.*CASSANDRA_BROADCAST_ADDRESS/d' /docker-entrypoint.sh && \
+    sed -ri '/sed -ri.*CASSANDRA_SEEDS.*\/cassandra.yaml/d' /docker-entrypoint.sh
 
-COPY etc/jmxremote.password /etc/cassandra/jmxremote.password
-COPY etc/jmxremote.access /etc/cassandra/jmxremote.access
-
-RUN chown cassandra:cassandra /etc/cassandra/jmxremote.password /etc/cassandra/jmxremote.access \
-    && chmod 400 /etc/cassandra/jmxremote.access /etc/cassandra/jmxremote.password \
-    && chmod +x /etc/preStart.py /etc/onChange.py
 
 EXPOSE 7000 7001 7199 9042 9160
 

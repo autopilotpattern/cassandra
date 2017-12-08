@@ -1,11 +1,10 @@
 {
-  consul: '{{ if .CONSUL_AGENT }}localhost{{ else }}{{ .CONSUL | default "consul"}}{{ end }}:8500',
+  consul: 'localhost:8500',
   logging: {
     level: "DEBUG",
-    format: "text"
+    format: "default"
   },
   jobs: [
-    {{ if .CONSUL_AGENT }}
     {
       name: 'consul-agent',
       exec: ['/usr/local/bin/consul', 'agent',
@@ -23,11 +22,10 @@
       },
       restarts: 'unlimited'
     },
-    {{ end }}
     {
       // without a "when" field this will start first
-      name: "preStart",
-      exec: "python /etc/preStart.py"
+      name: 'cassandra-preStart',
+      exec: ['python', '/usr/local/bin/containerpilot_handler.py', 'preStart'],
     },
     {
       name: "cassandra",
@@ -41,13 +39,13 @@
         timeout: "10s"
       },
       when: {
-        source: "preStart",
-        once: "exitSuccess",
+        source: 'cassandra-preStart',
+        once: 'exitSuccess',
       },
     },
     {
-      name: 'onChange-cassandra',
-      exec: 'python /etc/onChange.py',
+      name: 'cassandra-onChange',
+      exec: ['python', '/usr/local/bin/containerpilot_handler.py', 'onChange'],
       when: {
         source: 'watch.cassandra',
         each: 'changed'
