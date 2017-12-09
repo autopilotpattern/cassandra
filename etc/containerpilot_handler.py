@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from __future__ import print_function
+from time import sleep
 from sys import argv, stderr, path
 from consul import Consul
 from socket import gethostname
@@ -10,7 +11,7 @@ from containerpilot_handler.utils import resolve_home, resolve_cluster_name, res
 
 
 def main(args):
-  log('containerpilot_handler started')
+  log('containerpilot_handler started: {}'.format(str(args)))
 
   CASSANDRA_HOME = resolve_home()
   CASSANDRA_USER, CASSANDRA_PASSWORD = resolve_credentials()
@@ -25,21 +26,29 @@ def main(args):
 
   log('node configuration: {}'.format(node))
 
-
   current_seeds = node.query_seeds()
 
-  if not node.enough_seeds_exist(current_seeds) and not node.already_registered_as_seed(current_seeds):
-    log('volunteering as seed node')
-    node.register_as_seed(current_seeds)
+  if 'fakeBoot' in args:
+    log('pretending to boot')
+    sleep(10)
+    log('fakeBoot complete')
+    return
 
 
   if 'preStart' in args:
+    # loop while we try to grab a lock on the seeds list
+    while not node.enough_seeds_exist(current_seeds) and not node.register_as_seed(current_seeds):
+      sleep(5)
+      current_seeds = node.query_seeds()
+      log('waiting for seeds lock, current seed list: {}'.format(str(current_seeds)))
+
+    # either enough seed nodes appeared in consul kv or we managed to add ourselves and grab the lock
+
     # render our template in case there are existing seeds
     log('rendering configuration during preStart')
 
     # attempting to render the config immediately can result in our own volunteering being omitted
     # TODO: figure out what consul-template config would work like this (and not block indefinitely)
-    from time import sleep
     sleep(1)
 
     node.render_config()

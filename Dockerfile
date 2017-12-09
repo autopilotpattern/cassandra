@@ -41,9 +41,9 @@ RUN set -ex \
 
 # Add Containerpilot and set its configuration
 ENV CONTAINERPILOT /etc/containerpilot.json5
-ENV CONTAINERPILOT_VERSION 3.3.3
+ENV CONTAINERPILOT_VERSION 3.6.1
 
-RUN export CONTAINERPILOT_CHECKSUM=8d680939a8a5c8b27e764d55a78f5e3ae7b42ef4 \
+RUN export CONTAINERPILOT_CHECKSUM=57857530356708e9e8672d133b3126511fb785ab \
     && export archive=containerpilot-${CONTAINERPILOT_VERSION}.tar.gz \
     && wget --quiet -O /tmp/${archive} \
          "https://github.com/joyent/containerpilot/releases/download/${CONTAINERPILOT_VERSION}/${archive}" \

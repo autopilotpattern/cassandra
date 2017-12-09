@@ -1,5 +1,5 @@
 from __future__ import print_function
-from os import listdir
+from os.path import exists
 from sys import stderr
 from socket import gethostname, gethostbyname
 from datetime import datetime
@@ -11,6 +11,8 @@ class Cassandra(object):
 
   FLAG_SNAPSHOT_REQUIRED = 'SNAPSHOT_REQUIRED'
 
+  FILE_SESSION_ID = '/tmp/consul.session'
+
   def __init__(self, consul, storage, home, user, password, datacenter, cluster_name):
     self.id = "cassandra-{}".format(gethostname())
     self.consul = consul
@@ -21,7 +23,8 @@ class Cassandra(object):
     self.datacenter = datacenter
     self.cluster_name = cluster_name
 
-    self.session_id = self.consul.session.create(self.id, behavior='delete', ttl=120)
+    self.session_id = self.load_or_create_session()
+    self.persist_session()
 
   def __str__(self):
     return 'Cassandra <id={}, consul={}, storage={}, user={}, datacenter={}, cluster_name={} session_id={}>'.format(
@@ -32,6 +35,22 @@ class Cassandra(object):
 
   def build_snapshot_key(self):
     return 'cassandra-snapshot-{}-{}'.format(self.datacenter, gethostname())
+
+  def load_or_create_session(self):
+    if exists(Cassandra.FILE_SESSION_ID):
+      log('found session file')
+      with open(Cassandra.FILE_SESSION_ID, 'r') as session_file:
+        return session_file.read()
+
+    log('creating new session')
+    return self.consul.session.create(self.id, behavior='delete', ttl=120)
+
+  def persist_session(self):
+    with open(Cassandra.FILE_SESSION_ID, 'w') as session_file:
+      session_file.write(self.session_id)
+
+    log('renewing persisted session: {}'.format(self.session_id))
+    self.consul.session.renew(self.session_id)
 
   def query_snapshot_state(self):
     _, snapshot = self.consul.kv.get(self.build_snapshot_key())
@@ -45,6 +64,9 @@ class Cassandra(object):
     _, seeds = self.consul.kv.get(self.build_seeds_key())
     if seeds is None:
       return None
+
+    if seeds['Value'] is None:
+      return []
 
     return seeds['Value'].split(',')
 
@@ -79,7 +101,8 @@ class Cassandra(object):
       return False
 
     parsed_seeds = [s.strip() for s in seeds]
-    return 1 < len(parsed_seeds)
+    # ideally there should be two (three max) seeds per DC, but we'll start with just one
+    return 0 < len(parsed_seeds)
 
   def already_registered_as_seed(self, seeds):
     if seeds is None:
@@ -95,9 +118,7 @@ class Cassandra(object):
 
     seeds.append(own_ip)
 
-    registered = self.consul.kv.put(self.build_seeds_key(), ','.join(seeds))
-    if not registered:
-      raise ValueError('Failed to register ourselves as a seed')
+    return self.consul.kv.put(self.build_seeds_key(), ','.join(seeds), acquire=self.session_id)
 
   def render_config(self):
     log('SO CLOSE')
