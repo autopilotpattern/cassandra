@@ -118,10 +118,9 @@ class Cassandra(object):
 
     seeds.append(own_ip)
 
-    return self.consul.kv.put(self.build_seeds_key(), ','.join(seeds), acquire=self.session_id)
+    return self.consul.kv.put(self.build_seeds_key(), ','.join(seeds))
 
   def render_config(self):
-    log('SO CLOSE')
     check_call([
       'consul-template', '-once', '-template', '/etc/cassandra/cassandra.yaml.ctmpl:/etc/cassandra/cassandra.yaml'])
     log('template rendered to: {}'.format('/etc/cassandra/cassandra.yaml'))

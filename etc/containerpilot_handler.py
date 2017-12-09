@@ -45,7 +45,7 @@ def main(args):
     # either enough seed nodes appeared in consul kv or we managed to add ourselves and grab the lock
 
     # render our template in case there are existing seeds
-    log('rendering configuration during preStart')
+    log('rendering configuration during preStart, seeds: {}'.format(str(current_seeds)))
 
     # attempting to render the config immediately can result in our own volunteering being omitted
     # TODO: figure out what consul-template config would work like this (and not block indefinitely)

@@ -1,7 +1,7 @@
 {
   consul: 'localhost:8500',
   logging: {
-    level: "DEBUG",
+    level: "INFO",
     format: "default"
   },
   jobs: [
@@ -34,9 +34,9 @@
       port: 9042,
       health: {
         exec: "nodetool -u {{ .CASSANDRA_USER }} -pw {{ .CASSANDRA_PASSWORD }} status",
-        interval: 5,
+        interval: 15,
         ttl: 15,
-        timeout: "10s"
+        timeout: "1m"
       },
       when: {
         source: 'cassandra-preStart',

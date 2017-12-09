@@ -57,13 +57,20 @@ COPY etc/containerpilot.json5 /etc/containerpilot.json5
 
 COPY etc/containerpilot_handler /usr/local/bin/containerpilot_handler
 COPY etc/containerpilot_handler.py /usr/local/bin/containerpilot_handler.py
-COPY etc/cassandra.yaml.ctmpl /etc/cassandra/cassandra.yaml.ctmpl
+# COPY etc/cassandra.yaml.ctmpl /etc/cassandra/cassandra.yaml.ctmpl
+
+# the following COPY should be used for minimal-memory installations (as low as 256m?)
+COPY etc/cassandra.tiny.yaml.ctmpl /etc/cassandra/cassandra.yaml.ctmpl
 
 # disable the automatic seed configuration that enables single-node bootstrapping
 # the first line corresponds to "always set self as seed"
 # the second line actually inserts CASSANDRA_SEEDS into the cassandra.yaml
 RUN sed -ri '/CASSANDRA_SEEDS.*CASSANDRA_BROADCAST_ADDRESS/d' /docker-entrypoint.sh && \
     sed -ri '/sed -ri.*CASSANDRA_SEEDS.*\/cassandra.yaml/d' /docker-entrypoint.sh
+
+# TODO: uncomment for tiny cassandra nodes (don't forget to change the COPY above to cassandra.tiny.yaml.ctmpl)
+RUN sed -ri 's/^#MAX_HEAP_SIZE.*/MAX_HEAP_SIZE="64M"/' /etc/cassandra/cassandra-env.sh && \
+    sed -ri 's/^#HEAP_NEWSIZE.*/HEAP_NEWSIZE="12M"/' /etc/cassandra/cassandra-env.sh
 
 
 EXPOSE 7000 7001 7199 9042 9160

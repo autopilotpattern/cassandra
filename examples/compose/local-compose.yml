@@ -6,7 +6,7 @@ services:
     build: ../../
     image: autopilotpattern/cassandra:latest
     restart: always
-    mem_limit: 2g
+    mem_limit: 512m
     dns: 127.0.0.1
     # uncomment the following lines for more rapid development
     volumes:
