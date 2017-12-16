@@ -1,0 +1,81 @@
+version: '2.1'
+# Cassandra demonstration of the Autopilot pattern
+
+services:
+  cassandra-dc1:
+    build: ../../
+    image: autopilotpattern/cassandra:latest
+    restart: always
+    mem_limit: 512m
+    dns: 127.0.0.1
+    # uncomment the following lines for more rapid development
+    volumes:
+      - ../../etc/containerpilot_handler:/usr/local/bin/containerpilot_handler
+      - ../../etc/containerpilot_handler.py:/usr/local/bin/containerpilot_handler.py
+      - ../../etc/cassandra.yaml.ctmpl:/etc/cassandra/cassandra.yaml.ctmpl
+      - ../../tmp:/tmp/snapshots
+    environment:
+      - CONSUL=consuldc1
+      - CASSANDRA_USER=c
+      - CASSANDRA_PASSWORD=c
+      - CASSANDRA_CLUSTER_NAME=demo
+      - SNAPSHOT_TARGET=file:///tmp/snapshots
+      # the following options pertain to multi-datacenter deployments
+      # - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
+      # - CASSANDRA_DC=
+      # - CASSANDRA_RACK=
+    links:
+      - consul-dc1:consul
+
+  cassandra-dc2:
+    build: ../../
+    image: autopilotpattern/cassandra:latest
+    restart: always
+    mem_limit: 512m
+    dns: 127.0.0.1
+    # uncomment the following lines for more rapid development
+    volumes:
+      - ../../etc/containerpilot_handler:/usr/local/bin/containerpilot_handler
+      - ../../etc/containerpilot_handler.py:/usr/local/bin/containerpilot_handler.py
+      - ../../etc/cassandra.yaml.ctmpl:/etc/cassandra/cassandra.yaml.ctmpl
+      - ../../tmp:/tmp/snapshots
+    environment:
+      - CONSUL=consuldc1
+      - CASSANDRA_USER=c
+      - CASSANDRA_PASSWORD=c
+      - CASSANDRA_CLUSTER_NAME=demo
+      - SNAPSHOT_TARGET=file:///tmp/snapshots
+      # the following options pertain to multi-datacenter deployments
+      # - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
+      # - CASSANDRA_DC=
+      # - CASSANDRA_RACK=
+    links:
+      - consul-dc1:consul
+
+  consul-dc1:
+    build: .
+    image: autopilotpattern/consul:latest
+    restart: always
+    mem_limit: 128m
+    ports:
+        - 8500
+    environment:
+      - CONSUL=consuldc1
+      - CONSUL_DATACENTER_NAME=dc1
+    command: >
+      /usr/local/bin/containerpilot
+
+  consul-dc2:
+    image: autopilotpattern/consul:latest
+    restart: always
+    mem_limit: 128m
+    ports:
+        - 8500
+    environment:
+      - CONSUL=consuldc2
+      - CONSUL_DATACENTER_NAME=dc2
+      - CONSUL_RETRY_JOIN_WAN="consuldc1"
+    command: >
+      /usr/local/bin/containerpilot
+    links:
+      - consul-dc1

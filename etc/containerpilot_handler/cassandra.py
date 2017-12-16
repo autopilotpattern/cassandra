@@ -1,6 +1,7 @@
 from __future__ import print_function
 from os.path import exists
 from sys import stderr
+from consul.base import NotFound
 from socket import gethostname, gethostbyname
 from datetime import datetime
 from containerpilot_handler.utils import log
@@ -24,7 +25,11 @@ class Cassandra(object):
     self.cluster_name = cluster_name
 
     self.session_id = self.load_or_create_session()
-    self.persist_session()
+    try:
+      self.persist_session()
+    except NotFound as e:
+      self.session_id = self.load_or_create_session(forceNew=True)
+      self.persist_session()
 
   def __str__(self):
     return 'Cassandra <id={}, consul={}, storage={}, user={}, datacenter={}, cluster_name={} session_id={}>'.format(
@@ -36,11 +41,13 @@ class Cassandra(object):
   def build_snapshot_key(self):
     return 'cassandra-snapshot-{}-{}'.format(self.datacenter, gethostname())
 
-  def load_or_create_session(self):
-    if exists(Cassandra.FILE_SESSION_ID):
+  def load_or_create_session(self, forceNew=False):
+    if exists(Cassandra.FILE_SESSION_ID) and forceNew:
       log('found session file')
       with open(Cassandra.FILE_SESSION_ID, 'r') as session_file:
         return session_file.read()
+    else:
+      log('skipping cached session load')
 
     log('creating new session')
     return self.consul.session.create(self.id, behavior='delete', ttl=120)
@@ -61,14 +68,14 @@ class Cassandra(object):
     return snapshot['Value']
 
   def query_seeds(self):
-    _, seeds = self.consul.kv.get(self.build_seeds_key())
+    midx, seeds = self.consul.kv.get(self.build_seeds_key())
     if seeds is None:
-      return None
+      return midx, None
 
     if seeds['Value'] is None:
-      return []
+      return midx, []
 
-    return seeds['Value'].split(',')
+    return midx, seeds['Value'].split(',')
 
   def read_saved_seeds(self, should_retry=True):
     loaded_conf = None
@@ -110,7 +117,7 @@ class Cassandra(object):
 
     return gethostbyname(gethostname()) in [s.strip() for s in seeds]
 
-  def register_as_seed(self, seeds):
+  def register_as_seed(self, seeds, modify_index):
     if seeds is None:
       seeds = []
 
@@ -118,7 +125,7 @@ class Cassandra(object):
 
     seeds.append(own_ip)
 
-    return self.consul.kv.put(self.build_seeds_key(), ','.join(seeds))
+    return self.consul.kv.put(self.build_seeds_key(), ','.join(seeds), cas=modify_index)
 
   def render_config(self):
     check_call([

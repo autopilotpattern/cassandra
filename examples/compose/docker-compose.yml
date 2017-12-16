@@ -4,7 +4,7 @@ version: '2.1'
 services:
   cassandra:
     build: ../../
-    image: autopilotpattern/cassandra:latest
+    image: tjcelaya/cassandra
     restart: always
     mem_limit: 512m
     dns: 127.0.0.1
@@ -15,45 +15,26 @@ services:
       - ../../etc/cassandra.yaml.ctmpl:/etc/cassandra/cassandra.yaml.ctmpl
       - ../../tmp:/tmp/snapshots
     environment:
-      - CONSUL=consuldc1
-      - CASSANDRA_USER=cassandra
-      - CASSANDRA_PASSWORD=cassandra
+      - CONSUL_AGENT=1
+      - CONSUL=consul
+      - CASSANDRA_USER=c
+      - CASSANDRA_PASSWORD=c
       - CASSANDRA_CLUSTER_NAME=demo
-      - CASSANDRA_KEYSPACES=demo
-      - CASSANDRA_TOPOLOGY={"demo":{"datacenter1":1}}
       - CASSANDRA_ENDPOINT_SNITCH=SimpleSnitch
       - SNAPSHOT_TARGET=file:///tmp/snapshots
-      # the following options pertain to multi-datacenter deployments
-      # - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
-      # - CASSANDRA_DC=
-      # - CASSANDRA_RACK=
     links:
-      - consuldc1:consul
+      - consul:consul
 
-  consuldc1:
+  consul:
     build: .
-    image: autopilotpattern/consul:${TAG:-latest}
+    image: tjcelaya/consul
     restart: always
     mem_limit: 128m
     ports:
         - 8500
     environment:
-      - CONSUL=consuldc1
+      - CONSUL_DEV=1
+      - CONSUL=consul
       - CONSUL_DATACENTER_NAME=dc1
     command: >
       /usr/local/bin/containerpilot
-
-  consuldc2:
-    image: autopilotpattern/consul:${TAG:-latest}
-    restart: always
-    mem_limit: 128m
-    ports:
-        - 8500
-    environment:
-      - CONSUL=consuldc2
-      - CONSUL_DATACENTER_NAME=dc2
-      - CONSUL_RETRY_JOIN_WAN="consuldc1"
-    command: >
-      /usr/local/bin/containerpilot
-    links:
-      - consuldc1

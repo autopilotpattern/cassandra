@@ -1,5 +1,5 @@
 {
-  consul: 'localhost:8500',
+  consul: '{{ if .CONSUL_AGENT }}localhost{{ else }}{{ .CONSUL }}{{ end }}:{{ .CONSUL_PORT | default "8500" }}',
   logging: {
     level: "INFO",
     format: "default"

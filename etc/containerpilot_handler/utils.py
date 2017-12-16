@@ -49,6 +49,10 @@ def resolve_datacenter(c):
   if 'CASSANDRA_DC' in environ:
     return environ['CASSANDRA_DC']
 
+  # TODO: figure out what priority this mdata-get call should have relative to Consul
+  # if exists('/native/usr/sbin/mdata-get') and consul is None:
+  #   return check_output('/native/usr/sbin/mdata-get sdc:datacenter_name')
+
   if not isinstance(c, Consul):
     raise ValueError('unexpected type for consul instance when resolving datacenter: {}'.format(type(c)))
 

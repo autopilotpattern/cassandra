@@ -1,5 +1,9 @@
 FROM cassandra:3.11.0
 
+# trying to use cqlsh to interact with cassandra since installing cassandra-driver takes _forever_
+# if the pip module is needed the package is:
+# cassandra-driver==3.12.0
+
 # install wget unzip and dig plus python modules
 RUN set -ex \
     && apt-get update \
@@ -7,8 +11,6 @@ RUN set -ex \
     && wget --quiet -O /tmp/get-pip.py https://bootstrap.pypa.io/get-pip.py \
     && python /tmp/get-pip.py \
     && pip install \
-        # trying to use cqlsh to do this stuff, installing cassandra-driver takes _forever_
-        # cassandra-driver==3.12.0 \
         python-Consul==0.7.2 \
         manta==2.6.0 \
         pyyaml==3.12 \
@@ -59,7 +61,7 @@ COPY etc/containerpilot_handler /usr/local/bin/containerpilot_handler
 COPY etc/containerpilot_handler.py /usr/local/bin/containerpilot_handler.py
 # COPY etc/cassandra.yaml.ctmpl /etc/cassandra/cassandra.yaml.ctmpl
 
-# the following COPY should be used for minimal-memory installations (as low as 256m?)
+# the following COPY should be used for minimal-memory installations, potentially as low as 256m
 COPY etc/cassandra.tiny.yaml.ctmpl /etc/cassandra/cassandra.yaml.ctmpl
 
 # disable the automatic seed configuration that enables single-node bootstrapping
@@ -68,7 +70,7 @@ COPY etc/cassandra.tiny.yaml.ctmpl /etc/cassandra/cassandra.yaml.ctmpl
 RUN sed -ri '/CASSANDRA_SEEDS.*CASSANDRA_BROADCAST_ADDRESS/d' /docker-entrypoint.sh && \
     sed -ri '/sed -ri.*CASSANDRA_SEEDS.*\/cassandra.yaml/d' /docker-entrypoint.sh
 
-# TODO: uncomment for tiny cassandra nodes (don't forget to change the COPY above to cassandra.tiny.yaml.ctmpl)
+# TODO: uncomment for tiny cassandra nodes, don't forget to change the COPY above to cassandra.tiny.yaml.ctmpl
 RUN sed -ri 's/^#MAX_HEAP_SIZE.*/MAX_HEAP_SIZE="64M"/' /etc/cassandra/cassandra-env.sh && \
     sed -ri 's/^#HEAP_NEWSIZE.*/HEAP_NEWSIZE="12M"/' /etc/cassandra/cassandra-env.sh
 

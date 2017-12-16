@@ -27,13 +27,8 @@ services:
     mem_limit: 128m
     network_mode: bridge
     ports:
-      - 8500:8500
+      - 8500
     labels:
       - triton.cns.services=cassandra-consul
     command: >
       /usr/local/bin/containerpilot
-      /bin/consul agent -server
-        -config-dir=/etc/consul
-        -log-level=err
-        -bootstrap-expect 1
-        -ui-dir /ui

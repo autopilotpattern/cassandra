@@ -26,7 +26,7 @@ def main(args):
 
   log('node configuration: {}'.format(node))
 
-  current_seeds = node.query_seeds()
+  seeds_modify_idx, current_seeds = node.query_seeds()
 
   if 'fakeBoot' in args:
     log('pretending to boot')
@@ -37,9 +37,9 @@ def main(args):
 
   if 'preStart' in args:
     # loop while we try to grab a lock on the seeds list
-    while not node.enough_seeds_exist(current_seeds) and not node.register_as_seed(current_seeds):
+    while not node.enough_seeds_exist(current_seeds) and not node.register_as_seed(current_seeds, seeds_modify_idx):
       sleep(5)
-      current_seeds = node.query_seeds()
+      seeds_modify_idx, current_seeds = node.query_seeds()
       log('waiting for seeds lock, current seed list: {}'.format(str(current_seeds)))
 
     # either enough seed nodes appeared in consul kv or we managed to add ourselves and grab the lock

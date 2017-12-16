@@ -30,3 +30,8 @@ cqlsh> CREATE KEYSPACE demo WITH replication = {'class': 'NetworkTopologyStrateg
 USE demo;
 
 ```
+
+
+# Credits
+
+- Minimal Cassandra configuration based on John Berryman's [Building the Perfect Cassandra Test Environment](http://opensourceconnections.com/blog/2013/08/31/building-the-perfect-cassandra-test-environment/)
