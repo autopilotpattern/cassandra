@@ -1,0 +1,34 @@
+version: '2.1'
+# Cassandra demonstration of the Autopilot pattern
+
+services:
+  cassandra:
+    image: autopilotpattern/cassandra:latest
+    restart: always
+    mem_limit: 4g
+    network_mode: bridge
+    labels:
+      - triton.cns.services=cassandra
+    environment:
+      - CONSUL=cassandra-consul.svc.${TRITON_CNS_SEARCH_DOMAIN_PRIVATE}
+      - CASSANDRA_USER=cassandra
+      - CASSANDRA_PASSWORD=cassandra
+      - CASSANDRA_CLUSTER_NAME=Test Cluster
+      - CASSANDRA_KEYSPACES=demo
+      - CASSANDRA_TOPOLOGY={"demo":{"datacenter1":1}}
+    links:
+      - consul:consul
+
+  # Start with a single host which will bootstrap the cluster.
+  # In production we'll want to use an HA cluster.
+  consul:
+    image: autopilotpattern/consul:0.7.2-r0.8
+    restart: always
+    mem_limit: 128m
+    network_mode: bridge
+    ports:
+      - 8500
+    labels:
+      - triton.cns.services=cassandra-consul
+    command: >
+      /usr/local/bin/containerpilot

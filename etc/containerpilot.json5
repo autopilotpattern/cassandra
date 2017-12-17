@@ -1,0 +1,61 @@
+{
+  consul: '{{ if .CONSUL_AGENT }}localhost{{ else }}{{ .CONSUL }}{{ end }}:{{ .CONSUL_PORT | default "8500" }}',
+  logging: {
+    level: "INFO",
+    format: "default"
+  },
+  jobs: [
+    {
+      name: 'consul-agent',
+      exec: ['/usr/local/bin/consul', 'agent',
+                  '-data-dir=/data',
+                  '-config-dir=/config',
+                  '-log-level=err',
+                  '-rejoin',
+                  '-retry-join', '{{ .CONSUL | default "consul" }}',
+                  '-retry-max', '10',
+                  '-retry-interval', '10s'],
+      health: {
+        exec: 'wget -O /dev/null http://localhost:8500',
+        interval: 10,
+        ttl: 25
+      },
+      restarts: 'unlimited'
+    },
+    {
+      // without a "when" field this will start first
+      name: 'cassandra-preStart',
+      exec: ['python', '/usr/local/bin/containerpilot_handler.py', 'preStart'],
+    },
+    {
+      name: "cassandra",
+      exec: "/docker-entrypoint.sh -f",
+      restarts: "unlimited",
+      port: 9042,
+      health: {
+        exec: "nodetool -u {{ .CASSANDRA_USER }} -pw {{ .CASSANDRA_PASSWORD }} status",
+        interval: 15,
+        ttl: 15,
+        timeout: "1m"
+      },
+      when: {
+        source: 'cassandra-preStart',
+        once: 'exitSuccess',
+      },
+    },
+    {
+      name: 'cassandra-onChange',
+      exec: ['python', '/usr/local/bin/containerpilot_handler.py', 'onChange'],
+      when: {
+        source: 'watch.cassandra',
+        each: 'changed'
+      }
+    }
+  ],
+  watches: [
+    {
+      name: "cassandra",
+      interval: 5,
+    }
+  ]
+}

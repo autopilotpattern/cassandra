@@ -1,0 +1,40 @@
+version: '2.1'
+# Cassandra demonstration of the Autopilot pattern
+
+services:
+  cassandra:
+    build: ../../
+    image: tjcelaya/cassandra
+    restart: always
+    mem_limit: 512m
+    dns: 127.0.0.1
+    # uncomment the following lines for more rapid development
+    volumes:
+      - ../../etc/containerpilot_handler:/usr/local/bin/containerpilot_handler
+      - ../../etc/containerpilot_handler.py:/usr/local/bin/containerpilot_handler.py
+      - ../../etc/cassandra.yaml.ctmpl:/etc/cassandra/cassandra.yaml.ctmpl
+      - ../../tmp:/tmp/snapshots
+    environment:
+      - CONSUL_AGENT=1
+      - CONSUL=consul
+      - CASSANDRA_USER=c
+      - CASSANDRA_PASSWORD=c
+      - CASSANDRA_CLUSTER_NAME=demo
+      - CASSANDRA_ENDPOINT_SNITCH=SimpleSnitch
+      - SNAPSHOT_TARGET=file:///tmp/snapshots
+    links:
+      - consul:consul
+
+  consul:
+    build: .
+    image: tjcelaya/consul
+    restart: always
+    mem_limit: 128m
+    ports:
+        - 8500
+    environment:
+      - CONSUL_DEV=1
+      - CONSUL=consul
+      - CONSUL_DATACENTER_NAME=dc1
+    command: >
+      /usr/local/bin/containerpilot
